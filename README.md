@@ -23,14 +23,17 @@ If the migration step fails with an authentication error, add *D1 Edit* to the b
 
 ## Using it from Claude
 
-Add `https://work-log.<your-subdomain>.workers.dev/mcp` as a custom connector in Claude under *Settings → Connectors*.
+Add `https://work-log.<your-subdomain>.workers.dev/mcp` as a custom connector in Claude under *Settings → Connectors*, with the request header `Authorization: Bearer <your API key>`.
 
-The endpoint has no authentication yet, so anyone who knows the URL can write to the log.
+## API key
+
+Every request to `/mcp` must send `Authorization: Bearer <API_KEY>`. Set the key as a secret on the Worker under *Settings → Variables and Secrets* (type *Secret*, name `API_KEY`). Until it is set, the server rejects every request.
 
 ## Local development
 
 ```sh
 npm install
+echo 'API_KEY=local-dev-key' > .dev.vars
 npx wrangler d1 migrations apply work-log --local
 npm run dev
 ```
