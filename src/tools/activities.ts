@@ -11,7 +11,7 @@ import {
 } from "../db/activities";
 import { taskExists } from "../db/tasks";
 import { positionOutOfRange, unknownActivity, unknownTask } from "./failures";
-import { success } from "./results";
+import { structuredSuccess, success } from "./results";
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -81,7 +81,7 @@ export function registerActivityTools(server: McpServer, db: D1Database): void {
 		},
 		async ({ from, to }) => {
 			const days = groupByDay(await listActivityRows(db, from ?? null, to ?? null));
-			return { structuredContent: { days }, content: [{ type: "text", text: JSON.stringify({ days }) }] };
+			return structuredSuccess({ days });
 		},
 	);
 }
