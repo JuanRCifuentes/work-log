@@ -5,36 +5,40 @@ import { failure } from "./results";
 
 // Lists the existing clients so the caller can pick the right one.
 export async function unknownClient(db: D1Database, shortName: string): Promise<CallToolResult> {
-	const names = (await listClientShortNames(db)).join(", ");
-	return failure(`No client named ${shortName}. Clients: ${names}`);
+	const names = joinNames(await listClientShortNames(db));
+	return failure(`No client named ${shortName}. Clients: ${names}. Use one of these, or add it with create_client`);
 }
 
 // Lists the existing projects so the caller can pick the right one.
 export async function unknownProject(db: D1Database, shortName: string): Promise<CallToolResult> {
-	const names = (await listProjectShortNames(db)).join(", ");
-	return failure(`No project named ${shortName}. Projects: ${names}`);
+	const names = joinNames(await listProjectShortNames(db));
+	return failure(`No project named ${shortName}. Projects: ${names}. Use one of these, or add it with create_project`);
 }
 
 export function duplicateClient(shortName: string, existingId: number): CallToolResult {
-	return failure(`A client named ${shortName} already exists as #${existingId}`);
+	return failure(`A client named ${shortName} already exists as #${existingId}. Pick another shortName`);
 }
 
 export function duplicateProject(shortName: string, existingId: number): CallToolResult {
-	return failure(`A project named ${shortName} already exists as #${existingId}`);
+	return failure(`A project named ${shortName} already exists as #${existingId}. Pick another shortName`);
 }
 
 export function duplicateTask(externalId: string, existingId: number): CallToolResult {
-	return failure(`Task ${externalId} already exists as #${existingId}`);
+	return failure(`Task ${externalId} already exists as #${existingId}. Pick another extId`);
 }
 
 export function unknownTask(taskId: number): CallToolResult {
-	return failure(`Task #${taskId} doesn't exist`);
+	return failure(`Task #${taskId} doesn't exist. Use an id from create_task or list_activities`);
 }
 
 export function unknownActivity(activityId: number): CallToolResult {
-	return failure(`Activity #${activityId} doesn't exist`);
+	return failure(`Activity #${activityId} doesn't exist. Use an id from log_activity or list_activities`);
 }
 
 export function positionOutOfRange(taskId: number, activityCount: number): CallToolResult {
 	return failure(`Task #${taskId} has ${activityCount} activities, so position must be 1 to ${activityCount}`);
+}
+
+function joinNames(names: string[]): string {
+	return names.length > 0 ? names.join(", ") : "none yet";
 }
