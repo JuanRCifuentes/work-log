@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
+import { isAuthorized } from "./auth";
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
@@ -237,18 +238,6 @@ function createServer(env: Env) {
 	);
 
 	return server;
-}
-
-// Compares digests so the check takes the same time whatever the key's length.
-async function isAuthorized(request: Request, apiKey: string | undefined): Promise<boolean> {
-	if (!apiKey) return false;
-	const header = request.headers.get("Authorization") ?? "";
-	const encoder = new TextEncoder();
-	const [given, expected] = await Promise.all([
-		crypto.subtle.digest("SHA-256", encoder.encode(header)),
-		crypto.subtle.digest("SHA-256", encoder.encode(`Bearer ${apiKey}`)),
-	]);
-	return crypto.subtle.timingSafeEqual(given, expected);
 }
 
 export default {
