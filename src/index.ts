@@ -22,11 +22,26 @@ function createServer(env: Env) {
 	return server;
 }
 
+// Compares digests so the check takes the same time whatever the key's length.
+async function isAuthorized(request: Request, apiKey: string | undefined): Promise<boolean> {
+	if (!apiKey) return false;
+	const header = request.headers.get("Authorization") ?? "";
+	const encoder = new TextEncoder();
+	const [given, expected] = await Promise.all([
+		crypto.subtle.digest("SHA-256", encoder.encode(header)),
+		crypto.subtle.digest("SHA-256", encoder.encode(`Bearer ${apiKey}`)),
+	]);
+	return crypto.subtle.timingSafeEqual(given, expected);
+}
+
 export default {
 	async fetch(request, env): Promise<Response> {
 		const url = new URL(request.url);
 		if (url.pathname !== "/mcp") {
 			return new Response("Not found", { status: 404 });
+		}
+		if (!(await isAuthorized(request, env.API_KEY))) {
+			return new Response("Unauthorized", { status: 401 });
 		}
 
 		// Stateless: a fresh server and transport for every request.
