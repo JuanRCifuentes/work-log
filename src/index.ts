@@ -2,51 +2,13 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
 import { isAuthorized } from "./auth";
-import { type ActivityRow, insertActivity, listActivityRows } from "./db/activities";
+import { groupByDay } from "./daily-log";
+import { insertActivity, listActivityRows } from "./db/activities";
 import { findClientId, insertClient, listClientShortNames } from "./db/clients";
 import { failure, success } from "./tools/results";
 import { findTaskIdByExternalId, insertTask, taskExists, updateTask } from "./db/tasks";
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-
-type Task = {
-	id: number;
-	externalId: string | null;
-	description: string;
-	client: string;
-	totalMinutes: number;
-	activities: { id: number; description: string; timeSpent: number; position: number }[];
-};
-
-// Rows arrive ordered by date then id, so tasks keep the order their first activity was logged in.
-// Each task's activities are then sorted by position.
-function groupByDay(rows: ActivityRow[]) {
-	const days: { date: string; totalMinutes: number; tasks: Task[] }[] = [];
-	for (const row of rows) {
-		let day = days.at(-1);
-		if (day?.date !== row.date) {
-			day = { date: row.date, totalMinutes: 0, tasks: [] };
-			days.push(day);
-		}
-		let task = day.tasks.find((t) => t.id === row.task_id);
-		if (!task) {
-			task = {
-				id: row.task_id,
-				externalId: row.external_id,
-				description: row.task_description,
-				client: row.client,
-				totalMinutes: 0,
-				activities: [],
-			};
-			day.tasks.push(task);
-		}
-		task.activities.push({ id: row.id, description: row.description, timeSpent: row.time_spent, position: row.position });
-		task.totalMinutes += row.time_spent;
-		day.totalMinutes += row.time_spent;
-	}
-	for (const day of days) for (const task of day.tasks) task.activities.sort((a, b) => a.position - b.position);
-	return days;
-}
 
 function createServer(db: D1Database) {
 	const server = new McpServer({ name: "work-log", version: "0.1.0" });
