@@ -11,7 +11,7 @@ The server listens at `/mcp` and exposes one tool:
 ## Database
 
 - `tasks`: `id`, `external_id` (an external id such as the Jira key `SPS-204`, optional and unique) and `description`.
-- `activities`: `id` and `description`.
+- `activities`: `id`, `description`, `date` (`YYYY-MM-DD`), `task_id` (a foreign key to `tasks`) and `time_spent` (in minutes).
 
 The schema lives in `migrations/`, and `npm run deploy` applies any new migrations before deploying.
 
