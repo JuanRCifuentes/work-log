@@ -15,8 +15,11 @@ The server listens at `/mcp` and exposes one tool:
 ## Deploying from GitHub
 
 1. In the Cloudflare dashboard, open the `work-log` Worker and go to *Settings → Builds → Connect*, then pick this repository.
-2. Set the deploy command to `npm run deploy`.
-3. Every push to `main` then builds and deploys the Worker.
+2. Leave the build command empty and set the deploy command to `npm run deploy`.
+3. Turn off preview builds for now: there is only one database, so previews would write to it.
+4. Every push to `main` then builds and deploys the Worker.
+
+If the migration step fails with an authentication error, add *D1 Edit* to the build's API token.
 
 ## Using it from Claude
 
