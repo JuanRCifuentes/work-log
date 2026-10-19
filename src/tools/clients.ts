@@ -1,7 +1,8 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { findClientId, insertClient } from "../db/clients";
-import { failure, success } from "./results";
+import { duplicateClient } from "./failures";
+import { success } from "./results";
 
 export function registerClientTools(server: McpServer, db: D1Database): void {
 	server.registerTool(
@@ -16,9 +17,7 @@ export function registerClientTools(server: McpServer, db: D1Database): void {
 		},
 		async ({ name, shortName, hourlyRate }) => {
 			const existingId = await findClientId(db, shortName);
-			if (existingId !== null) {
-				return failure(`A client named ${shortName} already exists as #${existingId}`);
-			}
+			if (existingId !== null) return duplicateClient(shortName, existingId);
 			const id = await insertClient(db, { name, shortName, hourlyRateCents: dollarsToCents(hourlyRate) });
 			return success(`Created client #${id} (${shortName})`);
 		},

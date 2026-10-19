@@ -1,6 +1,6 @@
 import { insertReturningId } from "./statements";
 
-export type NewClient = {
+type NewClient = {
 	name: string;
 	shortName: string;
 	hourlyRateCents: number;

@@ -1,27 +1,32 @@
+import { z } from "zod";
 import type { ActivityRow } from "./db/activities";
 
-export type DayActivity = {
-	id: number;
-	description: string;
-	timeSpent: number; // minutes
-	position: number;
-};
+// The shape list_activities returns: one entry per day, each with its tasks and their activities.
+export const daySchema = z.object({
+	date: z.string(), // YYYY-MM-DD
+	totalMinutes: z.number(),
+	tasks: z.array(
+		z.object({
+			id: z.number(),
+			externalId: z.string().nullable(),
+			description: z.string(),
+			project: z.string().nullable(),
+			client: z.string(),
+			totalMinutes: z.number(),
+			activities: z.array(
+				z.object({
+					id: z.number(),
+					description: z.string(),
+					timeSpent: z.number(), // minutes
+					position: z.number(),
+				}),
+			),
+		}),
+	),
+});
 
-export type DayTask = {
-	id: number;
-	externalId: string | null;
-	description: string;
-	project: string | null;
-	client: string;
-	totalMinutes: number;
-	activities: DayActivity[];
-};
-
-export type Day = {
-	date: string; // YYYY-MM-DD
-	totalMinutes: number;
-	tasks: DayTask[];
-};
+type Day = z.infer<typeof daySchema>;
+type DayTask = Day["tasks"][number];
 
 // Groups rows by day, then by task. Rows must be ordered by date, then id, so each day's tasks
 // keep the order their first activity was logged in. Each task's activities are sorted by position.

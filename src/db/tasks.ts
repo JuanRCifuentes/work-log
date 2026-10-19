@@ -1,12 +1,12 @@
 import { insertReturningId } from "./statements";
 
-export type NewTask = {
+type NewTask = {
 	externalId: string | null;
 	description: string;
 	projectId: number;
 };
 
-export type TaskChanges = Partial<NewTask>;
+type TaskChanges = Partial<NewTask>;
 
 export async function taskExists(db: D1Database, taskId: number): Promise<boolean> {
 	const row = await db.prepare("SELECT id FROM tasks WHERE id = ?").bind(taskId).first();

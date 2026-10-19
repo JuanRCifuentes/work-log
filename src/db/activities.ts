@@ -1,6 +1,6 @@
 import { insertReturningId } from "./statements";
 
-export type NewActivity = {
+type NewActivity = {
 	description: string;
 	taskId: number;
 	date: string; // YYYY-MM-DD
@@ -53,10 +53,10 @@ export async function listActivityRows(db: D1Database, from: string | null, to: 
 	return results;
 }
 
-export type ActivityChanges = Partial<Omit<NewActivity, "taskId">>;
+type ActivityChanges = Partial<Omit<NewActivity, "taskId">>;
 
 // Where an activity sits: its task and its place among that task's activities.
-export type ActivityPlacement = {
+type ActivityPlacement = {
 	taskId: number;
 	position: number;
 };
