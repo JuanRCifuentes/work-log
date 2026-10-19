@@ -7,7 +7,7 @@ export type NewActivity = {
 	timeSpent: number; // minutes
 };
 
-// One activity joined with its task and the task's client.
+// One activity joined with its task, the task's project and the project's client.
 export type ActivityRow = {
 	id: number;
 	description: string;
@@ -17,6 +17,7 @@ export type ActivityRow = {
 	task_id: number;
 	external_id: string | null;
 	task_description: string;
+	project: string | null; // NULL until the task is filed under a project
 	client: string;
 };
 
@@ -38,9 +39,11 @@ export async function listActivityRows(db: D1Database, from: string | null, to: 
 	const { results } = await db
 		.prepare(
 			`SELECT a.id, a.description, a.date, a.time_spent, a.position,
-				t.id AS task_id, t.external_id, t.description AS task_description, c.short_name AS client
+				t.id AS task_id, t.external_id, t.description AS task_description, p.short_name AS project,
+				c.short_name AS client
 			FROM activities a
 			JOIN tasks t ON t.id = a.task_id
+			LEFT JOIN projects p ON p.id = t.project_id
 			JOIN clients c ON c.id = t.client_id
 			WHERE (?1 IS NULL OR a.date >= ?1) AND (?2 IS NULL OR a.date <= ?2)
 			ORDER BY a.date, a.id`,

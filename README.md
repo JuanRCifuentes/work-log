@@ -7,19 +7,22 @@ A remote MCP server on Cloudflare Workers that records what you do in a D1 datab
 The server listens at `/mcp` and exposes these tools:
 
 - `create_client(name, shortName, hourlyRate)` adds a client. `hourlyRate` is in US dollars and is stored in cents.
-- `create_task(description, client, extId?)` adds a row to the `tasks` table for the client with that short name and returns its id. If a task with that `extId` already exists, it returns the existing one.
-- `edit_task(taskId, description?, client?, extId?)` changes the given fields of a task, such as moving it to another client by short name.
+- `create_project(name, shortName, client)` adds a project for the client with that short name. `shortName` is unique across all clients.
+- `edit_project(project, name?, shortName?, client?)` changes the given fields of the project with short name `project`, such as moving it to another client.
+- `create_task(description, project, extId?)` adds a row to the `tasks` table in the project with that short name and returns its id. If a task with that `extId` already exists, it returns the existing one.
+- `edit_task(taskId, description?, project?, extId?)` changes the given fields of a task, such as moving it to another project by short name.
 - `log_activity(description, taskId, date?, timeSpent)` adds a row to the `activities` table as the task's last activity and returns its id. `date` is `YYYY-MM-DD` and defaults to today in UTC; `timeSpent` is in minutes.
 - `edit_activity(activityId, description?, date?, timeSpent?, position?)` changes the given fields of an activity. A new `position` moves it within its task and shifts the activities in between by one, so positions stay 1 to n.
-- `list_activities(from?, to?)` returns activities grouped by day and then by task, with each task's client short name, each task's activities in position order, and each day's and task's total minutes. `from` and `to` are optional `YYYY-MM-DD` bounds.
+- `list_activities(from?, to?)` returns activities grouped by day and then by task, with each task's project short name (null when it has none) and client short name, each task's activities in position order, and each day's and task's total minutes. `from` and `to` are optional `YYYY-MM-DD` bounds.
 
 ## Database
 
 - `clients`: `id`, `name`, `short_name` (unique, such as `CCS`) and `hourly_rate_cents` (the hourly rate in US cents).
-- `tasks`: `id`, `external_id` (an external id such as the Jira key `SPS-204`, optional and unique), `description` and `client_id` (a foreign key to `clients`).
+- `projects`: `id`, `name`, `short_name` (unique across all clients, such as `ProSearch`) and `client_id` (a foreign key to `clients`).
+- `tasks`: `id`, `external_id` (an external id such as the Jira key `SPS-204`, optional and unique), `description`, `project_id` (a foreign key to `projects`) and `client_id` (a foreign key to `clients`, always the project's client).
 - `activities`: `id`, `description`, `date` (`YYYY-MM-DD`), `task_id` (a foreign key to `tasks`), `time_spent` (in minutes) and `position` (the activity's place in its task, from 1, unique per task).
 
-Every task belongs to one client. A task holds many activities, and each activity belongs to one task. In the activity log doc, tasks are the numbered items and activities are the lettered lines under them:
+Every project belongs to one client, and every new task to one project, whose client it takes. Tasks from before projects existed have no project until `edit_task` files them under one. A task holds many activities, and each activity belongs to one task. In the activity log doc, tasks are the numbered items and activities are the lettered lines under them:
 
 ```
 1. SPS-237: Reset Land Records column order (20 min)   <- task
@@ -53,7 +56,7 @@ Every request to `/mcp` must send `Authorization: Bearer <API_KEY>`. Set the key
 - `src/index.ts` routes requests to `/mcp`, checks the API key and hands the request to the MCP transport.
 - `src/auth.ts` checks the `Authorization` header against `API_KEY`.
 - `src/server.ts` builds the MCP server from the tool groups.
-- `src/tools/` holds one file per tool group (`clients.ts`, `tasks.ts`, `activities.ts`) plus the shared result and failure helpers.
+- `src/tools/` holds one file per tool group (`clients.ts`, `projects.ts`, `tasks.ts`, `activities.ts`) plus the shared result and failure helpers.
 - `src/db/` holds the SQL, one file per table.
 - `src/daily-log.ts` groups activity rows by day and task for `list_activities`.
 
