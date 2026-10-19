@@ -10,7 +10,10 @@ The server listens at `/mcp` and exposes one tool:
 
 ## Database
 
-`activities` has two columns, `id` and `description`. The schema lives in `migrations/`, and `npm run deploy` applies any new migrations before deploying.
+- `tasks`: `id`, `external_id` (an external id such as the Jira key `SPS-204`, optional and unique) and `description`.
+- `activities`: `id` and `description`.
+
+The schema lives in `migrations/`, and `npm run deploy` applies any new migrations before deploying.
 
 ## Deploying from GitHub
 
