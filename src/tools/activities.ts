@@ -1,6 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { groupByDay } from "../daily-log";
+import { daySchema, groupByDay } from "../daily-log";
 import {
 	countTaskActivities,
 	findActivityPlacement,
@@ -14,25 +14,6 @@ import { positionOutOfRange, unknownActivity, unknownTask } from "./failures";
 import { success } from "./results";
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
-
-// Mirrors the Day type in daily-log.ts.
-const daySchema = z.object({
-	date: z.string(),
-	totalMinutes: z.number(),
-	tasks: z.array(
-		z.object({
-			id: z.number(),
-			externalId: z.string().nullable(),
-			description: z.string(),
-			project: z.string().nullable(),
-			client: z.string(),
-			totalMinutes: z.number(),
-			activities: z.array(
-				z.object({ id: z.number(), description: z.string(), timeSpent: z.number(), position: z.number() }),
-			),
-		}),
-	),
-});
 
 export function registerActivityTools(server: McpServer, db: D1Database): void {
 	server.registerTool(
