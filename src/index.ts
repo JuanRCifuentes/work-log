@@ -115,6 +115,49 @@ function createServer(env: Env) {
 	);
 
 	server.registerTool(
+		"edit_task",
+		{
+			description: "Change a task's description, client or extId. Only the fields given are changed.",
+			inputSchema: {
+				taskId: z.number().int().positive().describe("Id of the task to change"),
+				description: z.string().min(1).optional().describe("New short title of the task"),
+				client: z.string().min(1).optional().describe("Short name of the new client, such as CCS"),
+				extId: z.string().min(1).optional().describe("New external id, such as the Jira key SPS-204"),
+			},
+		},
+		async ({ taskId, description, client, extId }) => {
+			const task = await env.DB.prepare("SELECT id FROM tasks WHERE id = ?").bind(taskId).first();
+			if (!task) {
+				return { isError: true, content: [{ type: "text", text: `Task #${taskId} doesn't exist` }] };
+			}
+			let clientId: number | undefined;
+			if (client) {
+				const clientRow = await env.DB.prepare("SELECT id FROM clients WHERE short_name = ?").bind(client).first<{ id: number }>();
+				if (!clientRow) {
+					const { results } = await env.DB.prepare("SELECT short_name FROM clients ORDER BY id").all<{ short_name: string }>();
+					const names = results.map((r) => r.short_name).join(", ");
+					return { isError: true, content: [{ type: "text", text: `No client named ${client}. Clients: ${names}` }] };
+				}
+				clientId = clientRow.id;
+			}
+			if (extId) {
+				const existing = await env.DB.prepare("SELECT id FROM tasks WHERE external_id = ? AND id != ?")
+					.bind(extId, taskId)
+					.first<{ id: number }>();
+				if (existing) {
+					return { isError: true, content: [{ type: "text", text: `Task ${extId} already exists as #${existing.id}` }] };
+				}
+			}
+			await env.DB.prepare(
+				"UPDATE tasks SET description = COALESCE(?1, description), client_id = COALESCE(?2, client_id), external_id = COALESCE(?3, external_id) WHERE id = ?4",
+			)
+				.bind(description ?? null, clientId ?? null, extId ?? null, taskId)
+				.run();
+			return { content: [{ type: "text", text: `Updated task #${taskId}` }] };
+		},
+	);
+
+	server.registerTool(
 		"log_activity",
 		{
 			description: "Record an activity done as part of a task. Create the task first with create_task if it doesn't exist.",
