@@ -13,6 +13,16 @@ The server listens at `/mcp` and exposes one tool:
 - `tasks`: `id`, `external_id` (an external id such as the Jira key `SPS-204`, optional and unique) and `description`.
 - `activities`: `id`, `description`, `date` (`YYYY-MM-DD`), `task_id` (a foreign key to `tasks`) and `time_spent` (in minutes).
 
+A task holds many activities, and each activity belongs to one task. In the activity log doc, tasks are the numbered items and activities are the lettered lines under them:
+
+```
+1. SPS-237: Reset Land Records column order (20 min)   <- task
+   a. Saved the user's column order to their preferences   <- activity
+   b. Made Reset Column Order restore the defaults          <- activity
+```
+
+A task's time is the sum of its activities' `time_spent`, and a day's total is the sum over that day's activities.
+
 The schema lives in `migrations/`, and `npm run deploy` applies any new migrations before deploying.
 
 ## Deploying from GitHub
