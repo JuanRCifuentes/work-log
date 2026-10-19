@@ -2,8 +2,8 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { findProjectId } from "../db/projects";
 import { findTaskIdByExternalId, insertTask, taskExists, updateTask } from "../db/tasks";
-import { unknownProject, unknownTask } from "./failures";
-import { failure, success } from "./results";
+import { duplicateTask, unknownProject, unknownTask } from "./failures";
+import { success } from "./results";
 
 export function registerTaskTools(server: McpServer, db: D1Database): void {
 	server.registerTool(
@@ -52,9 +52,7 @@ export function registerTaskTools(server: McpServer, db: D1Database): void {
 			}
 			if (extId) {
 				const existingId = await findTaskIdByExternalId(db, extId);
-				if (existingId !== null && existingId !== taskId) {
-					return failure(`Task ${extId} already exists as #${existingId}`);
-				}
+				if (existingId !== null && existingId !== taskId) return duplicateTask(extId, existingId);
 			}
 			await updateTask(db, taskId, { externalId: extId, description, projectId });
 			return success(`Updated task #${taskId}`);

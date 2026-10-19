@@ -2,8 +2,8 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { findClientId } from "../db/clients";
 import { findProjectId, insertProject, updateProject } from "../db/projects";
-import { unknownClient, unknownProject } from "./failures";
-import { failure, success } from "./results";
+import { duplicateProject, unknownClient, unknownProject } from "./failures";
+import { success } from "./results";
 
 export function registerProjectTools(server: McpServer, db: D1Database): void {
 	server.registerTool(
@@ -20,9 +20,7 @@ export function registerProjectTools(server: McpServer, db: D1Database): void {
 			const clientId = await findClientId(db, client);
 			if (clientId === null) return unknownClient(db, client);
 			const existingId = await findProjectId(db, shortName);
-			if (existingId !== null) {
-				return failure(`A project named ${shortName} already exists as #${existingId}`);
-			}
+			if (existingId !== null) return duplicateProject(shortName, existingId);
 			const id = await insertProject(db, { name, shortName, clientId });
 			return success(`Created project #${id} (${shortName})`);
 		},
@@ -50,9 +48,7 @@ export function registerProjectTools(server: McpServer, db: D1Database): void {
 			}
 			if (shortName) {
 				const existingId = await findProjectId(db, shortName);
-				if (existingId !== null && existingId !== projectId) {
-					return failure(`A project named ${shortName} already exists as #${existingId}`);
-				}
+				if (existingId !== null && existingId !== projectId) return duplicateProject(shortName, existingId);
 			}
 			await updateProject(db, projectId, { name, shortName, clientId });
 			return success(`Updated project #${projectId} (${shortName ?? project})`);

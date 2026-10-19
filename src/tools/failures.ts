@@ -15,6 +15,18 @@ export async function unknownProject(db: D1Database, shortName: string): Promise
 	return failure(`No project named ${shortName}. Projects: ${names}`);
 }
 
+export function duplicateClient(shortName: string, existingId: number): CallToolResult {
+	return failure(`A client named ${shortName} already exists as #${existingId}`);
+}
+
+export function duplicateProject(shortName: string, existingId: number): CallToolResult {
+	return failure(`A project named ${shortName} already exists as #${existingId}`);
+}
+
+export function duplicateTask(externalId: string, existingId: number): CallToolResult {
+	return failure(`Task ${externalId} already exists as #${existingId}`);
+}
+
 export function unknownTask(taskId: number): CallToolResult {
 	return failure(`Task #${taskId} doesn't exist`);
 }
