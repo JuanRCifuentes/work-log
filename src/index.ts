@@ -6,16 +6,58 @@ function createServer(env: Env) {
 	const server = new McpServer({ name: "work-log", version: "0.1.0" });
 
 	server.registerTool(
+		"create_task",
+		{
+			description:
+				"Create a task, such as a Jira ticket, that activities are logged under. If a task with the same extId already exists, returns that task instead.",
+			inputSchema: {
+				description: z.string().min(1).describe("Short title of the task"),
+				extId: z.string().min(1).optional().describe("External id, such as the Jira key SPS-204"),
+			},
+		},
+		async ({ description, extId }) => {
+			if (extId) {
+				const existing = await env.DB.prepare("SELECT id FROM tasks WHERE external_id = ?")
+					.bind(extId)
+					.first<{ id: number }>();
+				if (existing) {
+					return { content: [{ type: "text", text: `Task ${extId} already exists as #${existing.id}` }] };
+				}
+			}
+			const row = await env.DB.prepare("INSERT INTO tasks (external_id, description) VALUES (?, ?) RETURNING id")
+				.bind(extId ?? null, description)
+				.first<{ id: number }>();
+			return { content: [{ type: "text", text: `Created task #${row?.id}` }] };
+		},
+	);
+
+	server.registerTool(
 		"log_activity",
 		{
-			description: "Record an activity in the work log.",
-			inputSchema: { description: z.string().min(1).describe("What was done") },
+			description: "Record an activity done as part of a task. Create the task first with create_task if it doesn't exist.",
+			inputSchema: {
+				description: z.string().min(1).describe("What was done"),
+				taskId: z.number().int().positive().describe("Id of the task this activity belongs to"),
+				date: z
+					.string()
+					.regex(/^\d{4}-\d{2}-\d{2}$/)
+					.optional()
+					.describe("Day the work was done, as YYYY-MM-DD. Defaults to today in UTC"),
+				timeSpent: z.number().int().nonnegative().describe("Time spent, in minutes"),
+			},
 		},
-		async ({ description }) => {
-			const row = await env.DB.prepare("INSERT INTO activities (description) VALUES (?) RETURNING id")
-				.bind(description)
+		async ({ description, taskId, date, timeSpent }) => {
+			const task = await env.DB.prepare("SELECT id FROM tasks WHERE id = ?").bind(taskId).first();
+			if (!task) {
+				return { isError: true, content: [{ type: "text", text: `Task #${taskId} doesn't exist` }] };
+			}
+			const day = date ?? new Date().toISOString().slice(0, 10);
+			const row = await env.DB.prepare(
+				"INSERT INTO activities (description, task_id, date, time_spent) VALUES (?, ?, ?, ?) RETURNING id",
+			)
+				.bind(description, taskId, day, timeSpent)
 				.first<{ id: number }>();
-			return { content: [{ type: "text", text: `Logged activity #${row?.id}` }] };
+			return { content: [{ type: "text", text: `Logged activity #${row?.id} on task #${taskId}` }] };
 		},
 	);
 

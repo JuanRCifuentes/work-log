@@ -4,13 +4,27 @@ A remote MCP server on Cloudflare Workers that records what you do in a D1 datab
 
 ## What it does
 
-The server listens at `/mcp` and exposes one tool:
+The server listens at `/mcp` and exposes these tools:
 
-- `log_activity(description)` adds a row to the `activities` table and returns its id.
+- `create_task(description, extId?)` adds a row to the `tasks` table and returns its id. If a task with that `extId` already exists, it returns the existing one.
+- `log_activity(description, taskId, date?, timeSpent)` adds a row to the `activities` table under that task and returns its id. `date` is `YYYY-MM-DD` and defaults to today in UTC; `timeSpent` is in minutes.
 
 ## Database
 
-`activities` has two columns, `id` and `description`. The schema lives in `migrations/`, and `npm run deploy` applies any new migrations before deploying.
+- `tasks`: `id`, `external_id` (an external id such as the Jira key `SPS-204`, optional and unique) and `description`.
+- `activities`: `id`, `description`, `date` (`YYYY-MM-DD`), `task_id` (a foreign key to `tasks`) and `time_spent` (in minutes).
+
+A task holds many activities, and each activity belongs to one task. In the activity log doc, tasks are the numbered items and activities are the lettered lines under them:
+
+```
+1. SPS-237: Reset Land Records column order (20 min)   <- task
+   a. Saved the user's column order to their preferences   <- activity
+   b. Made Reset Column Order restore the defaults          <- activity
+```
+
+A task's time is the sum of its activities' `time_spent`, and a day's total is the sum over that day's activities.
+
+The schema lives in `migrations/`, and `npm run deploy` applies any new migrations before deploying.
 
 ## Deploying from GitHub
 
