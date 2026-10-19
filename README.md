@@ -9,14 +9,14 @@ The server listens at `/mcp` and exposes these tools:
 - `create_client(name, shortName, hourlyRate)` adds a client. `hourlyRate` is in US dollars and is stored in cents.
 - `create_task(description, client, extId?)` adds a row to the `tasks` table for the client with that short name and returns its id. If a task with that `extId` already exists, it returns the existing one.
 - `edit_task(taskId, description?, client?, extId?)` changes the given fields of a task, such as moving it to another client by short name.
-- `log_activity(description, taskId, date?, timeSpent)` adds a row to the `activities` table under that task and returns its id. `date` is `YYYY-MM-DD` and defaults to today in UTC; `timeSpent` is in minutes.
-- `list_activities(from?, to?)` returns activities grouped by day and then by task, with each task's client short name and each day's and task's total minutes. `from` and `to` are optional `YYYY-MM-DD` bounds.
+- `log_activity(description, taskId, date?, timeSpent)` adds a row to the `activities` table as the task's last activity and returns its id. `date` is `YYYY-MM-DD` and defaults to today in UTC; `timeSpent` is in minutes.
+- `list_activities(from?, to?)` returns activities grouped by day and then by task, with each task's client short name, each task's activities in position order, and each day's and task's total minutes. `from` and `to` are optional `YYYY-MM-DD` bounds.
 
 ## Database
 
 - `clients`: `id`, `name`, `short_name` (unique, such as `CCS`) and `hourly_rate_cents` (the hourly rate in US cents).
 - `tasks`: `id`, `external_id` (an external id such as the Jira key `SPS-204`, optional and unique), `description` and `client_id` (a foreign key to `clients`).
-- `activities`: `id`, `description`, `date` (`YYYY-MM-DD`), `task_id` (a foreign key to `tasks`) and `time_spent` (in minutes).
+- `activities`: `id`, `description`, `date` (`YYYY-MM-DD`), `task_id` (a foreign key to `tasks`), `time_spent` (in minutes) and `position` (the activity's place in its task, from 1, unique per task).
 
 Every task belongs to one client. A task holds many activities, and each activity belongs to one task. In the activity log doc, tasks are the numbered items and activities are the lettered lines under them:
 
@@ -46,6 +46,15 @@ Add `https://work-log.<your-subdomain>.workers.dev/mcp` as a custom connector in
 ## API key
 
 Every request to `/mcp` must send `Authorization: Bearer <API_KEY>`. Set the key as a secret on the Worker under *Settings → Variables and Secrets* (type *Secret*, name `API_KEY`). Until it is set, the server rejects every request.
+
+## Code layout
+
+- `src/index.ts` routes requests to `/mcp`, checks the API key and hands the request to the MCP transport.
+- `src/auth.ts` checks the `Authorization` header against `API_KEY`.
+- `src/server.ts` builds the MCP server from the tool groups.
+- `src/tools/` holds one file per tool group (`clients.ts`, `tasks.ts`, `activities.ts`) plus the shared result and failure helpers.
+- `src/db/` holds the SQL, one file per table.
+- `src/daily-log.ts` groups activity rows by day and task for `list_activities`.
 
 ## Local development
 
