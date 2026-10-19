@@ -6,16 +6,19 @@ A remote MCP server on Cloudflare Workers that records what you do in a D1 datab
 
 The server listens at `/mcp` and exposes these tools:
 
-- `create_task(description, extId?)` adds a row to the `tasks` table and returns its id. If a task with that `extId` already exists, it returns the existing one.
+- `create_client(name, shortName, hourlyRate)` adds a client. `hourlyRate` is in US dollars and is stored in cents.
+- `create_task(description, client, extId?)` adds a row to the `tasks` table for the client with that short name and returns its id. If a task with that `extId` already exists, it returns the existing one.
+- `edit_task(taskId, description?, client?, extId?)` changes the given fields of a task, such as moving it to another client by short name.
 - `log_activity(description, taskId, date?, timeSpent)` adds a row to the `activities` table under that task and returns its id. `date` is `YYYY-MM-DD` and defaults to today in UTC; `timeSpent` is in minutes.
-- `list_activities(from?, to?)` returns activities grouped by day and then by task, with each day's and task's total minutes. `from` and `to` are optional `YYYY-MM-DD` bounds.
+- `list_activities(from?, to?)` returns activities grouped by day and then by task, with each task's client short name and each day's and task's total minutes. `from` and `to` are optional `YYYY-MM-DD` bounds.
 
 ## Database
 
-- `tasks`: `id`, `external_id` (an external id such as the Jira key `SPS-204`, optional and unique) and `description`.
+- `clients`: `id`, `name`, `short_name` (unique, such as `CCS`) and `hourly_rate_cents` (the hourly rate in US cents).
+- `tasks`: `id`, `external_id` (an external id such as the Jira key `SPS-204`, optional and unique), `description` and `client_id` (a foreign key to `clients`).
 - `activities`: `id`, `description`, `date` (`YYYY-MM-DD`), `task_id` (a foreign key to `tasks`) and `time_spent` (in minutes).
 
-A task holds many activities, and each activity belongs to one task. In the activity log doc, tasks are the numbered items and activities are the lettered lines under them:
+Every task belongs to one client. A task holds many activities, and each activity belongs to one task. In the activity log doc, tasks are the numbered items and activities are the lettered lines under them:
 
 ```
 1. SPS-237: Reset Land Records column order (20 min)   <- task
