@@ -58,7 +58,7 @@ Every request to `/mcp` must send `Authorization: Bearer <API_KEY>`. Set the key
 - `src/server.ts` builds the MCP server from the tool groups.
 - `src/tools/` holds one file per tool group (`clients.ts`, `projects.ts`, `tasks.ts`, `activities.ts`) plus the shared result and failure helpers.
 - `src/db/` holds the SQL, one file per table.
-- `src/daily-log.ts` groups activity rows by day and task for `list_activities`.
+- `src/daily-log.ts` defines the shape `list_activities` returns and groups activity rows by day and task into it.
 
 ## Local development
 
