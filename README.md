@@ -47,6 +47,15 @@ Add `https://work-log.<your-subdomain>.workers.dev/mcp` as a custom connector in
 
 Every request to `/mcp` must send `Authorization: Bearer <API_KEY>`. Set the key as a secret on the Worker under *Settings → Variables and Secrets* (type *Secret*, name `API_KEY`). Until it is set, the server rejects every request.
 
+## Code layout
+
+- `src/index.ts` routes requests to `/mcp`, checks the API key and hands the request to the MCP transport.
+- `src/auth.ts` checks the `Authorization` header against `API_KEY`.
+- `src/server.ts` builds the MCP server from the tool groups.
+- `src/tools/` holds one file per tool group (`clients.ts`, `tasks.ts`, `activities.ts`) plus the shared result and failure helpers.
+- `src/db/` holds the SQL, one file per table.
+- `src/daily-log.ts` groups activity rows by day and task for `list_activities`.
+
 ## Local development
 
 ```sh
