@@ -1,12 +1,12 @@
 import { insertReturningId } from "./statements";
 
-export type NewProject = {
+type NewProject = {
 	name: string;
 	shortName: string;
 	clientId: number;
 };
 
-export type ProjectChanges = Partial<NewProject>;
+type ProjectChanges = Partial<NewProject>;
 
 export async function findProjectId(db: D1Database, shortName: string): Promise<number | null> {
 	const row = await db.prepare("SELECT id FROM projects WHERE short_name = ?").bind(shortName).first<{ id: number }>();
