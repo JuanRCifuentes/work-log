@@ -4,8 +4,9 @@ A remote MCP server on Cloudflare Workers that records what you do in a D1 datab
 
 ## What it does
 
-The server listens at `/mcp` and exposes one tool:
+The server listens at `/mcp` and exposes these tools:
 
+- `create_task(description, extId?)` adds a row to the `tasks` table and returns its id. If a task with that `extId` already exists, it returns the existing one.
 - `log_activity(description)` adds a row to the `activities` table and returns its id.
 
 ## Database

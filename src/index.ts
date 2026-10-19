@@ -6,6 +6,32 @@ function createServer(env: Env) {
 	const server = new McpServer({ name: "work-log", version: "0.1.0" });
 
 	server.registerTool(
+		"create_task",
+		{
+			description:
+				"Create a task, such as a Jira ticket, that activities are logged under. If a task with the same extId already exists, returns that task instead.",
+			inputSchema: {
+				description: z.string().min(1).describe("Short title of the task"),
+				extId: z.string().min(1).optional().describe("External id, such as the Jira key SPS-204"),
+			},
+		},
+		async ({ description, extId }) => {
+			if (extId) {
+				const existing = await env.DB.prepare("SELECT id FROM tasks WHERE external_id = ?")
+					.bind(extId)
+					.first<{ id: number }>();
+				if (existing) {
+					return { content: [{ type: "text", text: `Task ${extId} already exists as #${existing.id}` }] };
+				}
+			}
+			const row = await env.DB.prepare("INSERT INTO tasks (external_id, description) VALUES (?, ?) RETURNING id")
+				.bind(extId ?? null, description)
+				.first<{ id: number }>();
+			return { content: [{ type: "text", text: `Created task #${row?.id}` }] };
+		},
+	);
+
+	server.registerTool(
 		"log_activity",
 		{
 			description: "Record an activity in the work log.",
