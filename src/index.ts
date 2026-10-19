@@ -2,6 +2,47 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
 
+const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+type ActivityRow = {
+	id: number;
+	description: string;
+	date: string;
+	time_spent: number;
+	task_id: number;
+	external_id: string | null;
+	task_description: string;
+};
+
+type Task = {
+	id: number;
+	externalId: string | null;
+	description: string;
+	totalMinutes: number;
+	activities: { id: number; description: string; timeSpent: number }[];
+};
+
+// Rows arrive ordered by date then id, so tasks keep the order their first activity was logged in.
+function groupByDay(rows: ActivityRow[]) {
+	const days: { date: string; totalMinutes: number; tasks: Task[] }[] = [];
+	for (const row of rows) {
+		let day = days.at(-1);
+		if (day?.date !== row.date) {
+			day = { date: row.date, totalMinutes: 0, tasks: [] };
+			days.push(day);
+		}
+		let task = day.tasks.find((t) => t.id === row.task_id);
+		if (!task) {
+			task = { id: row.task_id, externalId: row.external_id, description: row.task_description, totalMinutes: 0, activities: [] };
+			day.tasks.push(task);
+		}
+		task.activities.push({ id: row.id, description: row.description, timeSpent: row.time_spent });
+		task.totalMinutes += row.time_spent;
+		day.totalMinutes += row.time_spent;
+	}
+	return days;
+}
+
 function createServer(env: Env) {
 	const server = new McpServer({ name: "work-log", version: "0.1.0" });
 
@@ -38,9 +79,7 @@ function createServer(env: Env) {
 			inputSchema: {
 				description: z.string().min(1).describe("What was done"),
 				taskId: z.number().int().positive().describe("Id of the task this activity belongs to"),
-				date: z
-					.string()
-					.regex(/^\d{4}-\d{2}-\d{2}$/)
+				date: dateSchema
 					.optional()
 					.describe("Day the work was done, as YYYY-MM-DD. Defaults to today in UTC"),
 				timeSpent: z.number().int().nonnegative().describe("Time spent, in minutes"),
@@ -58,6 +97,50 @@ function createServer(env: Env) {
 				.bind(description, taskId, day, timeSpent)
 				.first<{ id: number }>();
 			return { content: [{ type: "text", text: `Logged activity #${row?.id} on task #${taskId}` }] };
+		},
+	);
+
+	server.registerTool(
+		"list_activities",
+		{
+			description:
+				"List logged activities grouped by day, then by task, with time totals. Optionally limit to a date range.",
+			inputSchema: {
+				from: dateSchema.optional().describe("First day to include, as YYYY-MM-DD"),
+				to: dateSchema.optional().describe("Last day to include, as YYYY-MM-DD"),
+			},
+			outputSchema: {
+				days: z.array(
+					z.object({
+						date: z.string(),
+						totalMinutes: z.number(),
+						tasks: z.array(
+							z.object({
+								id: z.number(),
+								externalId: z.string().nullable(),
+								description: z.string(),
+								totalMinutes: z.number(),
+								activities: z.array(
+									z.object({ id: z.number(), description: z.string(), timeSpent: z.number() }),
+								),
+							}),
+						),
+					}),
+				),
+			},
+			annotations: { readOnlyHint: true },
+		},
+		async ({ from, to }) => {
+			const { results } = await env.DB.prepare(
+				`SELECT a.id, a.description, a.date, a.time_spent, t.id AS task_id, t.external_id, t.description AS task_description
+				FROM activities a JOIN tasks t ON t.id = a.task_id
+				WHERE (?1 IS NULL OR a.date >= ?1) AND (?2 IS NULL OR a.date <= ?2)
+				ORDER BY a.date, a.id`,
+			)
+				.bind(from ?? null, to ?? null)
+				.all<ActivityRow>();
+			const days = groupByDay(results);
+			return { structuredContent: { days }, content: [{ type: "text", text: JSON.stringify({ days }) }] };
 		},
 	);
 
