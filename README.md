@@ -13,10 +13,10 @@ The server listens at `/mcp` and exposes these tools:
 ## Database
 
 - `clients`: `id`, `name`, `short_name` (unique, such as `CCS`) and `hourly_rate_cents` (the hourly rate in US cents).
-- `tasks`: `id`, `external_id` (an external id such as the Jira key `SPS-204`, optional and unique) and `description`.
+- `tasks`: `id`, `external_id` (an external id such as the Jira key `SPS-204`, optional and unique), `description` and `client_id` (a foreign key to `clients`).
 - `activities`: `id`, `description`, `date` (`YYYY-MM-DD`), `task_id` (a foreign key to `tasks`) and `time_spent` (in minutes).
 
-A task holds many activities, and each activity belongs to one task. In the activity log doc, tasks are the numbered items and activities are the lettered lines under them:
+Every task belongs to one client. A task holds many activities, and each activity belongs to one task. In the activity log doc, tasks are the numbered items and activities are the lettered lines under them:
 
 ```
 1. SPS-237: Reset Land Records column order (20 min)   <- task
