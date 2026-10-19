@@ -4,6 +4,7 @@ import { z } from "zod";
 import { isAuthorized } from "./auth";
 import { type ActivityRow, insertActivity, listActivityRows } from "./db/activities";
 import { findClientId, insertClient, listClientShortNames } from "./db/clients";
+import { failure, success } from "./tools/results";
 import { findTaskIdByExternalId, insertTask, taskExists, updateTask } from "./db/tasks";
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
@@ -63,10 +64,10 @@ function createServer(db: D1Database) {
 		async ({ name, shortName, hourlyRate }) => {
 			const existingId = await findClientId(db, shortName);
 			if (existingId !== null) {
-				return { isError: true, content: [{ type: "text", text: `A client named ${shortName} already exists as #${existingId}` }] };
+				return failure(`A client named ${shortName} already exists as #${existingId}`);
 			}
 			const id = await insertClient(db, { name, shortName, hourlyRateCents: Math.round(hourlyRate * 100) });
-			return { content: [{ type: "text", text: `Created client #${id} (${shortName})` }] };
+			return success(`Created client #${id} (${shortName})`);
 		},
 	);
 
@@ -85,16 +86,16 @@ function createServer(db: D1Database) {
 			const clientId = await findClientId(db, client);
 			if (clientId === null) {
 				const names = (await listClientShortNames(db)).join(", ");
-				return { isError: true, content: [{ type: "text", text: `No client named ${client}. Clients: ${names}` }] };
+				return failure(`No client named ${client}. Clients: ${names}`);
 			}
 			if (extId) {
 				const existingId = await findTaskIdByExternalId(db, extId);
 				if (existingId !== null) {
-					return { content: [{ type: "text", text: `Task ${extId} already exists as #${existingId}` }] };
+					return success(`Task ${extId} already exists as #${existingId}`);
 				}
 			}
 			const id = await insertTask(db, { externalId: extId ?? null, description, clientId });
-			return { content: [{ type: "text", text: `Created task #${id}` }] };
+			return success(`Created task #${id}`);
 		},
 	);
 
@@ -111,25 +112,25 @@ function createServer(db: D1Database) {
 		},
 		async ({ taskId, description, client, extId }) => {
 			if (!(await taskExists(db, taskId))) {
-				return { isError: true, content: [{ type: "text", text: `Task #${taskId} doesn't exist` }] };
+				return failure(`Task #${taskId} doesn't exist`);
 			}
 			let clientId: number | undefined;
 			if (client) {
 				const foundId = await findClientId(db, client);
 				if (foundId === null) {
 					const names = (await listClientShortNames(db)).join(", ");
-					return { isError: true, content: [{ type: "text", text: `No client named ${client}. Clients: ${names}` }] };
+					return failure(`No client named ${client}. Clients: ${names}`);
 				}
 				clientId = foundId;
 			}
 			if (extId) {
 				const existingId = await findTaskIdByExternalId(db, extId);
 				if (existingId !== null && existingId !== taskId) {
-					return { isError: true, content: [{ type: "text", text: `Task ${extId} already exists as #${existingId}` }] };
+					return failure(`Task ${extId} already exists as #${existingId}`);
 				}
 			}
 			await updateTask(db, taskId, { externalId: extId, description, clientId });
-			return { content: [{ type: "text", text: `Updated task #${taskId}` }] };
+			return success(`Updated task #${taskId}`);
 		},
 	);
 
@@ -148,11 +149,11 @@ function createServer(db: D1Database) {
 		},
 		async ({ description, taskId, date, timeSpent }) => {
 			if (!(await taskExists(db, taskId))) {
-				return { isError: true, content: [{ type: "text", text: `Task #${taskId} doesn't exist` }] };
+				return failure(`Task #${taskId} doesn't exist`);
 			}
 			const day = date ?? new Date().toISOString().slice(0, 10);
 			const id = await insertActivity(db, { description, taskId, date: day, timeSpent });
-			return { content: [{ type: "text", text: `Logged activity #${id} on task #${taskId}` }] };
+			return success(`Logged activity #${id} on task #${taskId}`);
 		},
 	);
 
