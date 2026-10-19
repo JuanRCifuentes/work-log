@@ -10,6 +10,7 @@ The server listens at `/mcp` and exposes these tools:
 - `create_task(description, client, extId?)` adds a row to the `tasks` table for the client with that short name and returns its id. If a task with that `extId` already exists, it returns the existing one.
 - `edit_task(taskId, description?, client?, extId?)` changes the given fields of a task, such as moving it to another client by short name.
 - `log_activity(description, taskId, date?, timeSpent)` adds a row to the `activities` table as the task's last activity and returns its id. `date` is `YYYY-MM-DD` and defaults to today in UTC; `timeSpent` is in minutes.
+- `edit_activity(activityId, description?, date?, timeSpent?, position?)` changes the given fields of an activity. A new `position` moves it within its task and shifts the activities in between by one, so positions stay 1 to n.
 - `list_activities(from?, to?)` returns activities grouped by day and then by task, with each task's client short name, each task's activities in position order, and each day's and task's total minutes. `from` and `to` are optional `YYYY-MM-DD` bounds.
 
 ## Database
