@@ -47,6 +47,30 @@ function createServer(env: Env) {
 	const server = new McpServer({ name: "work-log", version: "0.1.0" });
 
 	server.registerTool(
+		"create_client",
+		{
+			description: "Create a client, the person or company that work is done for.",
+			inputSchema: {
+				name: z.string().min(1).describe("Full name, such as Courthouse Computer Systems"),
+				shortName: z.string().min(1).describe("Short unique name, such as CCS"),
+				hourlyRate: z.number().nonnegative().describe("Hourly rate in US dollars, such as 18"),
+			},
+		},
+		async ({ name, shortName, hourlyRate }) => {
+			const existing = await env.DB.prepare("SELECT id FROM clients WHERE short_name = ?").bind(shortName).first<{ id: number }>();
+			if (existing) {
+				return { isError: true, content: [{ type: "text", text: `A client named ${shortName} already exists as #${existing.id}` }] };
+			}
+			const row = await env.DB.prepare(
+				"INSERT INTO clients (name, short_name, hourly_rate_cents) VALUES (?, ?, ?) RETURNING id",
+			)
+				.bind(name, shortName, Math.round(hourlyRate * 100))
+				.first<{ id: number }>();
+			return { content: [{ type: "text", text: `Created client #${row?.id} (${shortName})` }] };
+		},
+	);
+
+	server.registerTool(
 		"create_task",
 		{
 			description:
