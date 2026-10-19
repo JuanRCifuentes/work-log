@@ -1,0 +1,4 @@
+CREATE TABLE activities (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	description TEXT NOT NULL
+);

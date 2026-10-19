@@ -1,0 +1,15 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "work-log",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-10-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "work-log",
+			"database_id": "4aadec38-eeaa-4dab-85cc-9db01e58ea0d",
+			"migrations_dir": "migrations"
+		}
+	]
+}
