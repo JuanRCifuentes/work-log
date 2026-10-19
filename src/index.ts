@@ -9,6 +9,7 @@ type ActivityRow = {
 	description: string;
 	date: string;
 	time_spent: number;
+	position: number;
 	task_id: number;
 	external_id: string | null;
 	task_description: string;
@@ -21,10 +22,11 @@ type Task = {
 	description: string;
 	client: string;
 	totalMinutes: number;
-	activities: { id: number; description: string; timeSpent: number }[];
+	activities: { id: number; description: string; timeSpent: number; position: number }[];
 };
 
 // Rows arrive ordered by date then id, so tasks keep the order their first activity was logged in.
+// Each task's activities are then sorted by position.
 function groupByDay(rows: ActivityRow[]) {
 	const days: { date: string; totalMinutes: number; tasks: Task[] }[] = [];
 	for (const row of rows) {
@@ -45,10 +47,11 @@ function groupByDay(rows: ActivityRow[]) {
 			};
 			day.tasks.push(task);
 		}
-		task.activities.push({ id: row.id, description: row.description, timeSpent: row.time_spent });
+		task.activities.push({ id: row.id, description: row.description, timeSpent: row.time_spent, position: row.position });
 		task.totalMinutes += row.time_spent;
 		day.totalMinutes += row.time_spent;
 	}
+	for (const day of days) for (const task of day.tasks) task.activities.sort((a, b) => a.position - b.position);
 	return days;
 }
 
@@ -210,7 +213,7 @@ function createServer(env: Env) {
 								client: z.string(),
 								totalMinutes: z.number(),
 								activities: z.array(
-									z.object({ id: z.number(), description: z.string(), timeSpent: z.number() }),
+									z.object({ id: z.number(), description: z.string(), timeSpent: z.number(), position: z.number() }),
 								),
 							}),
 						),
@@ -221,7 +224,7 @@ function createServer(env: Env) {
 		},
 		async ({ from, to }) => {
 			const { results } = await env.DB.prepare(
-				`SELECT a.id, a.description, a.date, a.time_spent, t.id AS task_id, t.external_id, t.description AS task_description, c.short_name AS client
+				`SELECT a.id, a.description, a.date, a.time_spent, a.position, t.id AS task_id, t.external_id, t.description AS task_description, c.short_name AS client
 				FROM activities a JOIN tasks t ON t.id = a.task_id JOIN clients c ON c.id = t.client_id
 				WHERE (?1 IS NULL OR a.date >= ?1) AND (?2 IS NULL OR a.date <= ?2)
 				ORDER BY a.date, a.id`,
