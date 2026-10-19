@@ -12,12 +12,14 @@ type ActivityRow = {
 	task_id: number;
 	external_id: string | null;
 	task_description: string;
+	client: string;
 };
 
 type Task = {
 	id: number;
 	externalId: string | null;
 	description: string;
+	client: string;
 	totalMinutes: number;
 	activities: { id: number; description: string; timeSpent: number }[];
 };
@@ -33,7 +35,14 @@ function groupByDay(rows: ActivityRow[]) {
 		}
 		let task = day.tasks.find((t) => t.id === row.task_id);
 		if (!task) {
-			task = { id: row.task_id, externalId: row.external_id, description: row.task_description, totalMinutes: 0, activities: [] };
+			task = {
+				id: row.task_id,
+				externalId: row.external_id,
+				description: row.task_description,
+				client: row.client,
+				totalMinutes: 0,
+				activities: [],
+			};
 			day.tasks.push(task);
 		}
 		task.activities.push({ id: row.id, description: row.description, timeSpent: row.time_spent });
@@ -152,6 +161,7 @@ function createServer(env: Env) {
 								id: z.number(),
 								externalId: z.string().nullable(),
 								description: z.string(),
+								client: z.string(),
 								totalMinutes: z.number(),
 								activities: z.array(
 									z.object({ id: z.number(), description: z.string(), timeSpent: z.number() }),
@@ -165,8 +175,8 @@ function createServer(env: Env) {
 		},
 		async ({ from, to }) => {
 			const { results } = await env.DB.prepare(
-				`SELECT a.id, a.description, a.date, a.time_spent, t.id AS task_id, t.external_id, t.description AS task_description
-				FROM activities a JOIN tasks t ON t.id = a.task_id
+				`SELECT a.id, a.description, a.date, a.time_spent, t.id AS task_id, t.external_id, t.description AS task_description, c.short_name AS client
+				FROM activities a JOIN tasks t ON t.id = a.task_id JOIN clients c ON c.id = t.client_id
 				WHERE (?1 IS NULL OR a.date >= ?1) AND (?2 IS NULL OR a.date <= ?2)
 				ORDER BY a.date, a.id`,
 			)
