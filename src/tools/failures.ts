@@ -1,11 +1,18 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { listClientShortNames } from "../db/clients";
+import { listProjectShortNames } from "../db/projects";
 import { failure } from "./results";
 
 // Lists the existing clients so the caller can pick the right one.
 export async function unknownClient(db: D1Database, shortName: string): Promise<CallToolResult> {
 	const names = (await listClientShortNames(db)).join(", ");
 	return failure(`No client named ${shortName}. Clients: ${names}`);
+}
+
+// Lists the existing projects so the caller can pick the right one.
+export async function unknownProject(db: D1Database, shortName: string): Promise<CallToolResult> {
+	const names = (await listProjectShortNames(db)).join(", ");
+	return failure(`No project named ${shortName}. Projects: ${names}`);
 }
 
 export function unknownTask(taskId: number): CallToolResult {

@@ -24,6 +24,7 @@ const daySchema = z.object({
 			id: z.number(),
 			externalId: z.string().nullable(),
 			description: z.string(),
+			project: z.string().nullable(),
 			client: z.string(),
 			totalMinutes: z.number(),
 			activities: z.array(
@@ -89,7 +90,7 @@ export function registerActivityTools(server: McpServer, db: D1Database): void {
 		"list_activities",
 		{
 			description:
-				"List logged activities grouped by day, then by task, with time totals. Optionally limit to a date range.",
+				"List logged activities grouped by day, then by task, with each task's project and client and time totals. Optionally limit to a date range.",
 			inputSchema: {
 				from: dateSchema.optional().describe("First day to include, as YYYY-MM-DD"),
 				to: dateSchema.optional().describe("Last day to include, as YYYY-MM-DD"),

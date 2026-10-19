@@ -11,6 +11,7 @@ export type DayTask = {
 	id: number;
 	externalId: string | null;
 	description: string;
+	project: string | null;
 	client: string;
 	totalMinutes: number;
 	activities: DayActivity[];
@@ -54,6 +55,7 @@ function taskInDay(day: Day, row: ActivityRow): DayTask {
 		id: row.task_id,
 		externalId: row.external_id,
 		description: row.task_description,
+		project: row.project,
 		client: row.client,
 		totalMinutes: 0,
 		activities: [],
