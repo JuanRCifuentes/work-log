@@ -11,3 +11,11 @@ export async function unknownClient(db: D1Database, shortName: string): Promise<
 export function unknownTask(taskId: number): CallToolResult {
 	return failure(`Task #${taskId} doesn't exist`);
 }
+
+export function unknownActivity(activityId: number): CallToolResult {
+	return failure(`Activity #${activityId} doesn't exist`);
+}
+
+export function positionOutOfRange(taskId: number, activityCount: number): CallToolResult {
+	return failure(`Task #${taskId} has ${activityCount} activities, so position must be 1 to ${activityCount}`);
+}
