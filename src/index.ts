@@ -176,8 +176,11 @@ function createServer(env: Env) {
 				return { isError: true, content: [{ type: "text", text: `Task #${taskId} doesn't exist` }] };
 			}
 			const day = date ?? new Date().toISOString().slice(0, 10);
+			// The new activity goes last among the task's activities.
 			const row = await env.DB.prepare(
-				"INSERT INTO activities (description, task_id, date, time_spent) VALUES (?, ?, ?, ?) RETURNING id",
+				`INSERT INTO activities (description, task_id, date, time_spent, position)
+				SELECT ?1, ?2, ?3, ?4, COALESCE(MAX(position), 0) + 1 FROM activities WHERE task_id = ?2
+				RETURNING id`,
 			)
 				.bind(description, taskId, day, timeSpent)
 				.first<{ id: number }>();
