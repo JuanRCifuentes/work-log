@@ -74,13 +74,20 @@ function createServer(env: Env) {
 		"create_task",
 		{
 			description:
-				"Create a task, such as a Jira ticket, that activities are logged under. If a task with the same extId already exists, returns that task instead.",
+				"Create a task, such as a Jira ticket, for a client. Activities are logged under tasks. If a task with the same extId already exists, returns that task instead.",
 			inputSchema: {
 				description: z.string().min(1).describe("Short title of the task"),
+				client: z.string().min(1).describe("Short name of the client the work is for, such as CCS"),
 				extId: z.string().min(1).optional().describe("External id, such as the Jira key SPS-204"),
 			},
 		},
-		async ({ description, extId }) => {
+		async ({ description, client, extId }) => {
+			const clientRow = await env.DB.prepare("SELECT id FROM clients WHERE short_name = ?").bind(client).first<{ id: number }>();
+			if (!clientRow) {
+				const { results } = await env.DB.prepare("SELECT short_name FROM clients ORDER BY id").all<{ short_name: string }>();
+				const names = results.map((r) => r.short_name).join(", ");
+				return { isError: true, content: [{ type: "text", text: `No client named ${client}. Clients: ${names}` }] };
+			}
 			if (extId) {
 				const existing = await env.DB.prepare("SELECT id FROM tasks WHERE external_id = ?")
 					.bind(extId)
@@ -89,8 +96,10 @@ function createServer(env: Env) {
 					return { content: [{ type: "text", text: `Task ${extId} already exists as #${existing.id}` }] };
 				}
 			}
-			const row = await env.DB.prepare("INSERT INTO tasks (external_id, description) VALUES (?, ?) RETURNING id")
-				.bind(extId ?? null, description)
+			const row = await env.DB.prepare(
+				"INSERT INTO tasks (external_id, description, client_id) VALUES (?, ?, ?) RETURNING id",
+			)
+				.bind(extId ?? null, description, clientRow.id)
 				.first<{ id: number }>();
 			return { content: [{ type: "text", text: `Created task #${row?.id}` }] };
 		},
