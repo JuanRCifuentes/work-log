@@ -4,7 +4,8 @@ import { z } from "zod";
 import { isAuthorized } from "./auth";
 import { groupByDay } from "./daily-log";
 import { insertActivity, listActivityRows } from "./db/activities";
-import { findClientId, insertClient, listClientShortNames } from "./db/clients";
+import { findClientId, insertClient } from "./db/clients";
+import { unknownClient, unknownTask } from "./tools/failures";
 import { failure, success } from "./tools/results";
 import { findTaskIdByExternalId, insertTask, taskExists, updateTask } from "./db/tasks";
 
@@ -46,10 +47,7 @@ function createServer(db: D1Database) {
 		},
 		async ({ description, client, extId }) => {
 			const clientId = await findClientId(db, client);
-			if (clientId === null) {
-				const names = (await listClientShortNames(db)).join(", ");
-				return failure(`No client named ${client}. Clients: ${names}`);
-			}
+			if (clientId === null) return unknownClient(db, client);
 			if (extId) {
 				const existingId = await findTaskIdByExternalId(db, extId);
 				if (existingId !== null) {
@@ -73,16 +71,11 @@ function createServer(db: D1Database) {
 			},
 		},
 		async ({ taskId, description, client, extId }) => {
-			if (!(await taskExists(db, taskId))) {
-				return failure(`Task #${taskId} doesn't exist`);
-			}
+			if (!(await taskExists(db, taskId))) return unknownTask(taskId);
 			let clientId: number | undefined;
 			if (client) {
 				const foundId = await findClientId(db, client);
-				if (foundId === null) {
-					const names = (await listClientShortNames(db)).join(", ");
-					return failure(`No client named ${client}. Clients: ${names}`);
-				}
+				if (foundId === null) return unknownClient(db, client);
 				clientId = foundId;
 			}
 			if (extId) {
@@ -110,9 +103,7 @@ function createServer(db: D1Database) {
 			},
 		},
 		async ({ description, taskId, date, timeSpent }) => {
-			if (!(await taskExists(db, taskId))) {
-				return failure(`Task #${taskId} doesn't exist`);
-			}
+			if (!(await taskExists(db, taskId))) return unknownTask(taskId);
 			const day = date ?? new Date().toISOString().slice(0, 10);
 			const id = await insertActivity(db, { description, taskId, date: day, timeSpent });
 			return success(`Logged activity #${id} on task #${taskId}`);
