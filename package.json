@@ -1,0 +1,20 @@
+{
+	"name": "work-log",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "wrangler dev",
+		"deploy": "wrangler d1 migrations apply work-log --remote && wrangler deploy",
+		"typecheck": "tsc --noEmit",
+		"cf-typegen": "wrangler types"
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.32.1",
+		"zod": "^4.6.7"
+	},
+	"devDependencies": {
+		"@types/node": "^22.20.5",
+		"typescript": "^5.9.3",
+		"wrangler": "^4.151.2"
+	}
+}
